@@ -20,7 +20,6 @@ input,textarea{width:100%;background:#060e1c;border:1.5px solid #1a2d45;border-r
 textarea{resize:vertical;min-height:88px}
 .btn{background:#60a5fa;color:#040c18;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;width:100%;font-family:sans-serif;margin-bottom:6px}
 .btn2{background:#0b1829;color:#4a6888;border:1px solid #1a2d45;border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:sans-serif}
-.demo{background:none;color:#2a4060;border:1px solid #1a2d45;border-radius:8px;padding:7px;font-size:12px;cursor:pointer;width:100%;margin-top:4px;font-family:sans-serif}
 .row{display:flex;gap:8px;justify-content:space-between;margin-top:4px}
 .dots{display:flex;gap:4px;margin-top:12px;justify-content:center}
 .dot{width:22px;height:5px;border-radius:3px}
@@ -74,10 +73,8 @@ R.innerHTML="<div class='c' style='text-align:center;max-width:400px'>"
 +"<p class='sub' style='margin-bottom:6px'>Votre prenom</p>"
 +"<input id='ta' type='text' placeholder='Ex : Marie, Thomas...' style='text-align:center'/>"
 +"<button class='btn' id='b1'>Commencer mon parcours</button>"
-+"<button class='demo' id='b2'>Demonstration rapide</button>"
 +"</div>";
 document.getElementById("b1").onclick=function(){var v=tv();if(v){S.nom=v;S.pg="obj";draw();}};
-document.getElementById("b2").onclick=demo;
 var el=document.getElementById("ta");
 if(el){el.focus();el.onkeydown=function(e){if(e.key==="Enter"){var v=tv();if(v){S.nom=v;S.pg="obj";draw();}}};}
 return;
@@ -207,12 +204,6 @@ var te=[],co=[];
 if(has(sT,["contribuer","aider","service","impact"])&&has(cT,["pas legitime","pas assez","peur"]))te.push("Tension entre Sens (vouloir contribuer) et Croyances (se sentir illegitime).");
 if(has(caT,["communication","ecoute","relation"]))co.push("Vos capacites relationnelles et de communication sont un appui solide.");
 return{bl:bl,te:te,co:co};
-}
-function demo(){
-S.nom="Alex";S.obj="Devenir delegue medical.";
-S.sm={s:"CDI delegue medical.",m:"Contrat signe.",a:"Formation plus experience.",r:"Mes valeurs.",t:"6 mois."};
-S.rep={env:{0:"Calme.",1:"Bureau.",2:"Positifs.",3:"Equipe.",4:"Negatifs.",5:"Matin."},comp:{0:"Je procrastin.",1:"Je m efface.",2:"Apprendre.",3:"Devrais sans agir.",4:"Croises.",5:"Bloque."},cap:{0:"Communication.",1:"J explique bien.",2:"Persuasion.",3:"Confiance."},croy:{0:"Famille.",1:"Pas legitime.",2:"Pas fait pour ca.",3:"Honnetete.",4:"Elle merite."},id:{0:"Curieux.",1:"Fiable pas leader.",2:"Discret.",3:"Pas toujours.",4:"Expert."},sens:{0:"Sante.",1:"Pratiques.",2:"Ecoute.",3:"Aide."}};
-S.diag=analyse();S.pg="diag";draw();
 }
 draw();
 </script>
