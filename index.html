@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pyramide de Dilts — Coaching</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #040c18; }
+textarea:focus, input:focus { outline: none; }
+button:active { opacity: 0.85; }
+@media print {
+  body { background: white !important; }
+  .no-print { display: none !important; }
+  .print-doc { display: block !important; font-family: Georgia, serif; color: #111; background: white; padding: 24px 32px; }
+  .p-header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 14px; margin-bottom: 20px; }
+  .p-h1 { font-size: 20px; font-weight: bold; }
+  .p-sub { font-size: 12px; color: #555; margin-top: 4px; }
+  .p-bloc { font-size: 14px; font-weight: bold; padding: 5px 10px; background: #f0f0f0; margin: 16px 0 8px; border-left: 4px solid #333; }
+  .p-sec { border: 1px solid #ccc; border-left: 3px solid #555; border-radius: 4px; padding: 10px 12px; margin-bottom: 8px; page-break-inside: avoid; }
+  .p-title { font-weight: bold; font-size: 13px; margin-bottom: 5px; }
+  .p-rep { font-size: 13px; color: #333; margin: 2px 0; line-height: 1.6; }
+  .p-label { font-size: 11px; color: #777; margin: 3px 0; }
+  .p-ital { font-style: italic; font-size: 13px; color: #444; margin: 4px 0; }
+  .p-msg { background: #fffbe6; border: 1px solid #ddd; border-left: 4px solid #e6a817; padding: 12px; font-style: italic; font-size: 13px; line-height: 1.7; }
+  .p-footer { text-align: center; color: #aaa; font-size: 11px; margin-top: 24px; padding-top: 10px; border-top: 1px solid #eee; }
+  .screen-only { display: none !important; }
+}
+@media screen {
+  .print-doc { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── SPEECH ──────────────────────────────────────────────────────────────────
+function useSpeech(value, onChange) {
+  const [on, setOn] = useState(false);
+  const [ok, setOk] = useState(false);
+  const ref = useRef(null);
+  const base = useRef("");
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    setOk(true);
+    const r = new SR();
+    r.lang = "fr-FR"; r.continuous = true; r.interimResults = true;
+    r.onstart = () => { base.current = value || ""; setOn(true); };
+    r.onend = () => setOn(false);
+    r.onerror = () => setOn(false);
+    r.onresult = e => {
+      let fin = "", tmp = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) fin += t + " "; else tmp += t;
+      }
+      if (fin) base.current = (base.current + " " + fin).trim();
+      onChange((base.current + (tmp ? " " + tmp : "")).trim());
+    };
+    ref.current = r;
+    return () => { try { r.stop(); } catch(e) {} };
+  }, []);
+  const toggle = () => {
+    if (!ref.current) return;
+    if (on) ref.current.stop();
+    else { try { ref.current.start(); } catch(e) {} }
+  };
+  return { on, ok, toggle };
+}
+
+function Voix({ value, onChange, placeholder, c = "#60a5fa", min = 100 }) {
+  const { on, ok, toggle } = useSpeech(value, onChange);
+  return (
+    <div style={{ position:"relative", marginBottom:20 }}>
+      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{ width:"100%", boxSizing:"border-box", background:"#07111f", border:`1.5px solid ${on?c:"#1e2d3d"}`, borderRadius:10, color:"#dde6f0", fontSize:15, padding:`12px ${ok?48:14}px 12px 14px`, fontFamily:"inherit", lineHeight:1.65, resize:"vertical", minHeight:min, outline:"none" }} />
+      {ok && (
+        <button onClick={toggle} style={{ position:"absolute", right:8, bottom:8, width:32, height:32, borderRadius:"50%", border:"none", background:on?c:"#1a2a3a", color:on?"#07111f":"#4a6080", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:on?`0 0 0 4px ${c}33`:"none", transition:"all .2s" }}>
+          {on
+            ? <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+          }
+        </button>
+      )}
+      {on && (
+        <div style={{ position:"absolute", bottom:-18, right:0, fontSize:11, color:c, display:"flex", gap:4, alignItems:"center" }}>
+          <span style={{ width:6, height:6, borderRadius:"50%", background:c, display:"inline-block", animation:"bl 1s infinite" }} />
+          écoute…
+          <style>{`@keyframes bl{0%,100%{opacity:1}50%{opacity:0}}`}</style>
+
+```
+    </div>
+  )}
+</div>
+```
+
+);
+}
+
+// ─── DONNÉES ─────────────────────────────────────────────────────────────────
+const NIVEAUX = [
+{ id:“env”,  label:“Environnement”,       emoji:“🌍”, sous:“Où et quand ?”,         c:”#4ade80”, qs:[“Où travaillez-vous le mieux ? Décrivez votre environnement idéal.”, “Quel environnement à la maison est bon pour vous ?”, “De quel type de personnes aimez-vous vous entourer ?”, “Préférez-vous travailler seul ou en équipe ?”, “Quel type de personne vous vide de votre énergie ?”, “Quelles heures sont les plus productives pour vous ?”] },
+{ id:“comp”, label:“Comportement”,        emoji:“⚡”, sous:“Que faites-vous ?”,      c:”#a78bfa”, qs:[“Votre comportement actuel vous aide-t-il à atteindre vos objectifs ?”, “Votre comportement est-il en phase avec qui vous êtes vraiment ?”, “Que faites-vous qui rend votre vie intéressante ?”, “Que dites-vous régulièrement ? Y voyez-vous des habitudes limitantes ?”, “Quel langage corporel adoptez-vous dans les moments importants ?”, “Comment change votre respiration face au stress ?”] },
+{ id:“cap”,  label:“Capacités”,           emoji:“🛠”, sous:“Comment faire ?”,        c:”#fb923c”, qs:[“De quelles compétences êtes-vous le plus fier(e) ?”, “Que faites-vous bien selon ceux qui vous connaissent ?”, “Connaissez-vous quelqu’un dont vous admirez une capacité ? Laquelle ?”, “Que voudriez-vous apprendre pour avancer ?”] },
+{ id:“croy”, label:“Croyances & Valeurs”, emoji:“💎”, sous:“Pourquoi ?”,             c:”#f87171”, qs:[“Qu’est-ce qui est vraiment important pour vous dans la vie ?”, “Quelles croyances vous freinent ? Que pensez-vous de vous-même qui vous limite ?”, “Quand dites-vous ‘je dois’, ‘je ne peux pas’ ? Quelle croyance se cache derrière ?”, “Quelles valeurs guident votre quotidien ?”, “Qu’est-ce qu’une personne qui réussit là où vous bloquez penserait d’elle-même ?”] },
+{ id:“id”,   label:“Identité”,            emoji:“🧬”, sous:“Qui suis-je ?”,          c:”#34d399”, qs:[“Quel genre de personne êtes-vous ? En trois mots.”, “Comment les autres vous décrivent-ils ? Est-ce en accord avec qui vous voulez être ?”, “Quelles étiquettes portez-vous sur vous-même ?”, “Les autres vous voient-ils comme vous le souhaiteriez ?”, “Quelle identité voudriez-vous incarner pour atteindre votre objectif ?”] },
+{ id:“sens”, label:“Sens & Mission”,      emoji:“✨”, sous:“À quoi je contribue ?”, c:”#60a5fa”, qs:[“Pour quelle raison profonde êtes-vous là ? Quelle est votre mission ?”, “Quelle est votre contribution aux autres ?”, “Quelles sont vos forces les plus utiles au monde ?”, “Comment souhaitez-vous qu’on se souvienne de vous ?”] },
+];
+const SMART = [
+{ k:“s”, label:“Spécifique”, q:“Qu’est-ce que vous voulez précisément accomplir ? Soyez très concret(e).” },
+{ k:“m”, label:“Mesurable”,  q:“Comment saurez-vous que vous avez réussi ? Quels résultats concrets le prouveront ?” },
+{ k:“a”, label:“Atteignable”,q:“Pourquoi cet objectif est-il réalisable pour vous ? Quelles ressources avez-vous déjà ?” },
+{ k:“r”, label:“Pertinent”,  q:“Pourquoi est-ce important pour vous maintenant ?” },
+{ k:“t”, label:“Temporel”,   q:“Dans quel délai ? Quelles sont vos grandes étapes ?” },
+];
+
+// ─── ANALYSE ─────────────────────────────────────────────────────────────────
+function analyser(nom, obj, smart, reps) {
+const txt = nid => NIVEAUX.find(n=>n.id===nid).qs.map((_,i)=>reps[nid]?.[i]||””).join(” “).toLowerCase();
+const has = (t,ws) => ws.some(w=>t.includes(w));
+const croyT=txt(“croy”), compT=txt(“comp”), idT=txt(“id”), capT=txt(“cap”), sensT=txt(“sens”);
+const blocages = [];
+if (has(croyT,[“pas légitime”,“pas capable”,“pas fait pour”,“pas assez”,“ne mérite”,“peur”,“doute”,“illégitime”])) {
+blocages.push({ emoji:“💎”, titre:“Croyance limitante d’illégitimité”, niveau:“Croyances & Valeurs”,
+desc:“Vos réponses révèlent une croyance profonde que vous n’êtes pas tout à fait à votre place. Ce filtre invisible sabote vos comportements, freine l’expression de vos capacités, et crée une dissonance entre votre identité vécue et souhaitée.”,
+intervention:“Croyances & Valeurs → Identité”,
+actions:[“Listez 10 preuves concrètes de vos réussites passées. Relisez-les chaque matin pendant 21 jours.”,“Identifiez l’origine de cette croyance : qui vous a dit que vous n’étiez ‘pas assez’ ? Dissociez ce message de votre valeur réelle.”],
+question:“Si vous saviez avec certitude que vous méritez pleinement ce que vous visez, quelle serait votre première action dès demain ?”,
+indicateur:“Vous formulez vos demandes sans vous excuser de les faire.” });
+}
+if (has(compT,[“procrastin”,“reporte”,“évite”,“n’ose”,“sans agir”,“je devrais sans”,“efface”,“m’efface”])) {
+blocages.push({ emoji:“⚡”, titre:“Comportements de sabotage — procrastination et évitement”, niveau:“Comportement”,
+desc:“Ces comportements sont des protections inconscientes contre une peur. Ils maintiennent un statu quo rassurant mais bloquent toute progression vers l’objectif.”,
+intervention:“Capacités → Croyances”,
+actions:[“Définissez UNE action de 15 minutes maximum à faire dans les 24h suivantes. Une seule, non négociable.”,“Tenez un journal de bord : ‘Qu’ai-je évité aujourd’hui ? Quelle peur se cachait derrière ?’”],
+question:“Si l’échec était impossible, qu’est-ce que vous feriez aujourd’hui sans hésiter ?”,
+indicateur:“Vous passez à l’action dans les 24h suivant une décision, sans attendre les conditions parfaites.” });
+}
+if (has(idT,[“pas leader”,“discret”,“effacé”,“invisible”,“pas confiant”,“pas affirmé”,“pas encore”])) {
+blocages.push({ emoji:“🧬”, titre:“Écart identitaire — qui je suis vs qui je dois devenir”, niveau:“Identité”,
+desc:“Il existe un écart entre l’identité incarnée aujourd’hui et celle requise pour atteindre votre objectif. Si vous ne vous voyez pas comme ‘la personne qui réussit X’, vous auto-saboterez tout progrès.”,
+intervention:“Identité → Sens”,
+actions:[“Rédigez en détail le portrait de la personne que vous serez une fois votre objectif atteint. Relisez ce portrait chaque soir.”,“Adoptez chaque jour un comportement de cette future version de vous, même micro : posture, ton de voix, façon d’entrer dans une pièce.”],
+question:“Qui devez-vous décider d’être dès aujourd’hui pour que votre objectif devienne inévitable ?”,
+indicateur:“Vous décrivez spontanément qui vous êtes avec les mots de votre identité cible.” });
+}
+if (!blocages.length) {
+blocages.push({ emoji:“🚀”, titre:“Passage à l’action — transformer la clarté en résultats”, niveau:“Comportement”,
+desc:“Le principal enjeu est de passer de la réflexion à l’action structurée et régulière. Beaucoup de personnes bien alignées restent bloquées faute d’un plan concret et de rituels quotidiens.”,
+intervention:“Comportement”,
+actions:[“Définissez 3 actions hebdomadaires non-négociables. Planifiez-les comme des rendez-vous.”,“Créez un système de redevabilité : un partenaire de progression avec qui vous faites le point chaque semaine.”],
+question:“Quelle est LA chose qui, faite régulièrement, changerait tout dans votre progression ?”,
+indicateur:“Vous avancez chaque semaine sur votre objectif, même si c’est un petit pas.” });
+}
+const tensions = [], coherences = [];
+if (has(sensT,[“contribuer”,“aider”,“service”,“impact”]) && has(croyT,[“pas légitime”,“pas assez”,“peur”]))
+tensions.push(“Tension entre Sens (vouloir contribuer) et Croyances (se sentir illégitime). Votre ‘Pourquoi’ est fort mais vos croyances vous empêchent d’y accéder pleinement.”);
+if (has(idT,[“curieux”,“empathique”,“créatif”,“passionné”]) && has(compT,[“procrastin”,“efface”]))
+tensions.push(“Tension entre Identité (riche, positive) et Comportement (en retrait). Vous êtes plus que ce que vos comportements actuels laissent voir.”);
+if (has(capT,[“communication”,“écoute”,“relation”,“pédagogie”]))
+coherences.push(“Vos capacités relationnelles et de communication sont un appui solide — même si vos croyances les minimisent parfois.”);
+return { blocages, tensions, coherences };
+}
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+function App() {
+const [page, setPage] = useState(“login”);
+const [nom, setNom] = useState(””); const [nomI, setNomI] = useState(””);
+const [obj, setObj] = useState(””); const [smart, setSmart] = useState({});
+const [iS, setIS] = useState(0); const [iN, setIN] = useState(0); const [iQ, setIQ] = useState(0);
+const [reps, setReps] = useState({}); const [cur, setCur] = useState(””);
+const [diag, setDiag] = useState(null);
+const niv = NIVEAUX[iN];
+const saved = reps[niv?.id]?.[iQ] || “”;
+const val = cur || saved;
+
+function sauver() {
+const v = val.trim(); if (!v) return false;
+setReps(p=>({…p,[niv.id]:{…(p[niv.id]||{}),[iQ]:v}})); return true;
+}
+function suivant() {
+if (!sauver()) return; setCur(””);
+if (iQ+1<niv.qs.length){setIQ(iQ+1);return;}
+if (iN+1<NIVEAUX.length){setIN(iN+1);setIQ(0);return;}
+const rf={…reps,[niv.id]:{…(reps[niv.id]||{}),[iQ]:val.trim()}};
+setDiag(analyser(nom,obj,smart,rf)); setPage(“diag”);
+}
+function retour() {
+setCur(””);
+if (iQ>0){setIQ(iQ-1);return;}
+if (iN>0){const pn=NIVEAUX[iN-1];setIN(iN-1);setIQ(pn.qs.length-1);}
+}
+function reset(){setPage(“login”);setNom(””);setNomI(””);setObj(””);setSmart({});setIS(0);setIN(0);setIQ(0);setReps({});setCur(””);setDiag(null);}
+function handlePrint(){window.print();}
+function demo(){
+const rd={
+env:{0:“Environnement calme.”,1:“Bureau dédié.”,2:“Personnes positives.”,3:“Équipe avec autonomie.”,4:“Personnes négatives.”,5:“Le matin.”},
+comp:{0:“Pas toujours, je procrastin souvent.”,1:“Non, je m’efface.”,2:“Apprendre et partager.”,3:“Je dis ‘je devrais’ sans agir.”,4:“Je croise les bras.”,5:“Respiration bloquée.”},
+cap:{0:“Communication et écoute.”,1:“J’explique bien les choses complexes.”,2:“La persuasion de mon manager.”,3:“Confiance en entretien.”},
+croy:{0:“Famille et progression.”,1:“Je ne me sens pas toujours légitime.”,2:“Je dis ‘je ne suis pas fait pour ça’.”,3:“Honnêteté et service.”,4:“Elle pense mériter sa place.”},
+id:{0:“Curieux, empathique, perfectionniste.”,1:“Fiable mais pas leader.”,2:“Compétent mais discret.”,3:“Pas toujours.”,4:“Expert-conseil.”},
+sens:{0:“Améliorer la santé des patients.”,1:“Changer des pratiques.”,2:“Mon écoute.”,3:“Quelqu’un qui a aidé.”},
+};
+const sd={s:“CDI délégué médical.”,m:“Contrat avant septembre.”,a:“Formation + 3 ans B2B.”,r:“Aligné avec mes valeurs.”,t:“6 mois.”};
+setNom(“Alex”);setObj(“Décrocher un poste de délégué médical.”);setSmart(sd);setReps(rd);
+setDiag(analyser(“Alex”,“Décrocher un poste de délégué médical.”,sd,rd));setPage(“diag”);
+}
+
+const date = new Date().toLocaleDateString(“fr-FR”,{day:“2-digit”,month:“long”,year:“numeric”});
+
+if (page===“login”) return (
+<Pg><Card w={420} centre>
+<Pyr/><h1 style={S.h1}>Pyramide de Dilts</h1>
+<p style={S.sub}>Parcours de coaching guidé pour identifier vos blocages et libérer votre potentiel.</p>
+<div style={S.sep}/>
+<p style={{color:”#4a6080”,fontSize:13,marginBottom:6}}>Votre prénom</p>
+<input style={S.inp} placeholder=“Ex : Marie, Thomas…” value={nomI} autoFocus
+onChange={e=>setNomI(e.target.value)}
+onKeyDown={e=>e.key===“Enter”&&nomI.trim()&&(setNom(nomI.trim()),setPage(“obj”))}/>
+<Btn onClick={()=>nomI.trim()&&(setNom(nomI.trim()),setPage(“obj”))}>Commencer mon parcours →</Btn>
+<button onClick={demo} style={{…S.sec,marginTop:8,width:“100%”,opacity:0.4,fontSize:12}}>⚡ Démo rapide</button>
+</Card></Pg>
+);
+
+if (page===“obj”) return (
+<Pg><Card w={540}>
+<Bdg>Étape 1 — Objectif</Bdg><h2 style={S.h2}>Bonjour {nom} 👋</h2>
+<p style={S.desc}>Définissons votre <b style={{color:”#dde6f0”}}>objectif principal</b>.</p>
+<Voix value={obj} onChange={setObj} placeholder="Décrivez votre objectif… ou cliquez 🎤" min={110}/>
+<Btn onClick={()=>obj.trim()&&setPage(“smart”)}>Affiner (SMART) →</Btn>
+</Card></Pg>
+);
+
+if (page===“smart”){
+const q=SMART[iS];
+return (
+<Pg><Card w={560}>
+<div style={{display:“flex”,justifyContent:“space-between”,marginBottom:6}}>
+<Bdg>SMART · {iS+1}/{SMART.length}</Bdg><Tag c="#60a5fa">{q.label}</Tag>
+</div>
+<Bar pct={(iS/SMART.length)*100} c="#60a5fa"/>
+<h2 style={{...S.h2,fontSize:17,marginTop:14}}>{q.q}</h2>
+<Voix value={smart[q.k]||””} onChange={v=>setSmart(p=>({…p,[q.k]:v}))} placeholder=“Votre réponse… ou 🎤” c=”#60a5fa”/>
+<Row>
+<BtnS onClick={()=>iS>0?setIS(iS-1):setPage(“obj”)}>← Retour</BtnS>
+<Btn w=“auto” onClick={()=>smart[q.k]?.trim()&&(iS<SMART.length-1?setIS(iS+1):setPage(“pyr”))}>
+{iS<SMART.length-1?“Suivant →”:“Commencer →”}
+</Btn>
+</Row>
+</Card></Pg>
+);
+}
+
+if (page===“pyr”){
+const tot=NIVEAUX.reduce((s,n)=>s+n.qs.length,0);
+const pass=NIVEAUX.slice(0,iN).reduce((s,n)=>s+n.qs.length,0);
+const last=iN===NIVEAUX.length-1&&iQ===niv.qs.length-1;
+return (
+<Pg>
+<div style={{position:“fixed”,inset:0,background:`radial-gradient(ellipse at 50% 0%, ${niv.c}12 0%, transparent 60%)`,pointerEvents:“none”}}/>
+<Card w={600}>
+<div style={{display:“flex”,justifyContent:“space-between”,marginBottom:6}}>
+<Bdg>Niveau {iN+1}/{NIVEAUX.length} — {niv.emoji} {niv.label}</Bdg>
+<Tag c={niv.c}>{niv.sous}</Tag>
+</div>
+<Bar pct={((pass+iQ)/tot)*100} c={niv.c}/>
+<p style={{color:”#3a5070”,fontSize:12,margin:“8px 0 2px”}}>{niv.sous}</p>
+<h2 style={{color:”#e8f0f8”,fontSize:17,lineHeight:1.55,margin:“6px 0 14px”,fontWeight:600}}>{niv.qs[iQ]}</h2>
+<Voix value={val} onChange={setCur} placeholder="Exprimez-vous librement… ou 🎤" c={niv.c}/>
+<Row>
+<BtnS onClick={retour}>← Retour</BtnS>
+<button onClick={suivant} disabled={!val.trim()} style={{background:val.trim()?niv.c:”#1a2a3a”,color:val.trim()?”#07111f”:”#3a5070”,border:“none”,borderRadius:8,padding:“11px 20px”,fontSize:14,fontWeight:700,cursor:val.trim()?“pointer”:“not-allowed”}}>
+{last?“Générer mon diagnostic →”:“Question suivante →”}
+</button>
+</Row>
+<MiniPyr idx={iN}/>
+</Card>
+</Pg>
+);
+}
+
+if (page===“diag”&&diag) {
+return (
+<div>
+{/* ÉCRAN */}
+<Pg>
+<Card w={760} className="no-print">
+<div style={{display:“flex”,gap:12,alignItems:“center”,marginBottom:4}}>
+<Pyr size={28}/>
+<div>
+<h2 style={{...S.h1,fontSize:20,margin:0}}>Diagnostic — {nom}</h2>
+<p style={{color:”#2a4060”,fontSize:11,margin:0}}>Pyramide de Dilts · Académie de Performances</p>
+</div>
+</div>
+<div style={S.sep}/>
+<Sec c="#60a5fa" t="🎯 Objectif & Cadrage SMART">
+<p style={Sp.p}><b style={Sp.b}>Objectif :</b> {obj}</p>
+{SMART.map(s=>smart[s.k]?<p key={s.k} style={{…Sp.p,margin:“2px 0”}}><b style={Sp.b}>{s.label} :</b> {smart[s.k]}</p>:null)}
+</Sec>
+<Sec c="#a78bfa" t="🏗 Lecture de votre Pyramide — Niveau par niveau">
+{NIVEAUX.map(n=>{
+const ls=n.qs.map((_,i)=>reps[n.id]?.[i]).filter(Boolean);
+if(!ls.length)return null;
+return <div key={n.id} style={{marginBottom:10}}>
+<p style={{color:n.c,fontWeight:700,margin:“0 0 3px”,fontSize:13}}>{n.emoji} {n.label}</p>
+{ls.map((l,i)=><p key={i} style={{…Sp.p,margin:“2px 0”,paddingLeft:10,borderLeft:`2px solid ${n.c}44`}}>› {l}</p>)}
+</div>;
+})}
+</Sec>
+{(diag.tensions.length>0||diag.coherences.length>0)&&(
+<Sec c="#fb923c" t="⚡ Cohérence de votre Pyramide">
+{diag.tensions.map((t,i)=><p key={i} style={{…Sp.p,color:”#fb923c99”}}>⚠ {t}</p>)}
+{diag.coherences.map((c,i)=><p key={i} style={{…Sp.p,color:”#4ade8099”}}>✓ {c}</p>)}
+</Sec>
+)}
+<Sec c="#f87171" t="🚧 Blocages identifiés">
+{diag.blocages.map((b,i)=>(
+<div key={i} style={{background:”#0a0f1a”,border:`1px solid ${["#f87171","#fb923c","#a78bfa"][i%3]}44`,borderRadius:8,padding:“14px 16px”,marginBottom:10}}>
+<p style={{color:[”#f87171”,”#fb923c”,”#a78bfa”][i%3],fontWeight:700,margin:“0 0 4px”,fontSize:14}}>{b.emoji} Blocage {i+1} — {b.titre}</p>
+<p style={{…Sp.p,color:”#5a7a9a”,fontSize:12,margin:“0 0 6px”}}>Niveau : {b.niveau}</p>
+<p style={Sp.p}>{b.desc}</p>
+</div>
+))}
+</Sec>
+<Sec c="#4ade80" t="🌱 Plan d'action — Par blocage">
+{diag.blocages.map((b,i)=>(
+<div key={i} style={{marginBottom:14}}>
+<p style={{color:”#4ade80”,fontWeight:700,margin:“0 0 6px”,fontSize:13}}>{b.emoji} {b.titre}</p>
+<p style={{…Sp.p,color:”#3a6050”,fontSize:12,margin:“0 0 4px”}}>Intervention : {b.intervention}</p>
+{b.actions.map((a,j)=><p key={j} style={{…Sp.p,display:“flex”,gap:6}}><span style={{color:”#4ade80”,flexShrink:0}}>›</span><span>{a}</span></p>)}
+<p style={{…Sp.p,color:”#60a5fa”,fontStyle:“italic”,margin:“6px 0 2px”}}>❓ {b.question}</p>
+<p style={{…Sp.p,color:”#3a5070”,fontSize:12}}>✓ Indicateur : {b.indicateur}</p>
+</div>
+))}
+</Sec>
+<Sec c="#34d399" t="🧭 Vos 3 priorités de développement">
+{[{t:“Croyances limitantes”,d:“Le niveau le plus impactant. Une croyance libérée libère automatiquement les comportements.”},{t:“Identité cible claire”,d:“Définir précisément qui vous devez devenir et l’incarner dans vos microdécisions quotidiennes.”},{t:“Rituels d’action”,d:“Transformer les intentions en comportements réguliers non-négociables. La régularité bat l’intensité.”}].map((p,i)=><p key={i} style={Sp.p}><b style={Sp.b}>{i+1}. {p.t} :</b> {p.d}</p>)}
+</Sec>
+<Sec c=”#fbbf24” t={`💬 Message personnel pour ${nom}`}>
+<p style={{…Sp.p,fontStyle:“italic”,lineHeight:1.8,color:”#9aafca”}}>
+{nom}, vous avez eu le courage de vous arrêter pour vous regarder en face — c’est déjà un acte de leader. Ce que vos réponses révèlent, c’est quelqu’un de riche intérieurement, avec des valeurs claires, des capacités réelles et un sens profond de sa mission. Ce qui vous retient n’est pas un manque de talent — c’est une histoire que vous vous racontez sur vous-même, et les histoires peuvent changer. Vous avez tout ce qu’il faut. Il est temps de le décider.
+</p>
+</Sec>
+<div style={{marginTop:20,display:“flex”,gap:10,flexWrap:“wrap”}}>
+<BtnS onClick={reset}>← Nouveau parcours</BtnS>
+<Btn w="auto" onClick={handlePrint}>🖨 Imprimer / PDF</Btn>
+</div>
+</Card>
+</Pg>
+
+```
+    {/* IMPRESSION */}
+    <div className="print-doc">
+      <div className="p-header">
+        <div className="p-h1">Diagnostic de Coaching — Pyramide de Dilts</div>
+        <div className="p-sub">{nom} · {date} · Académie de Performances — Alexandre Griffet</div>
+      </div>
+      <div className="p-bloc">🎯 Objectif & Cadrage SMART</div>
+      <div className="p-sec">
+        <p className="p-rep"><b>Objectif :</b> {obj}</p>
+        {SMART.map(s=>smart[s.k]?<p key={s.k} className="p-rep"><b>{s.label} :</b> {smart[s.k]}</p>:null)}
+      </div>
+      <div className="p-bloc">🏗 Lecture de la Pyramide — Niveau par niveau</div>
+      {NIVEAUX.map(n=>{
+        const ls=n.qs.map((_,i)=>reps[n.id]?.[i]).filter(Boolean);
+        if(!ls.length)return null;
+        return <div key={n.id} className="p-sec">
+          <div className="p-title">{n.emoji} {n.label}</div>
+          {ls.map((l,i)=><p key={i} className="p-rep">› {l}</p>)}
+        </div>;
+      })}
+      {(diag.tensions.length>0||diag.coherences.length>0)&&<>
+        <div className="p-bloc">⚡ Cohérence de la Pyramide</div>
+        <div className="p-sec">
+          {diag.tensions.map((t,i)=><p key={i} className="p-rep">⚠ {t}</p>)}
+          {diag.coherences.map((c,i)=><p key={i} className="p-rep">✓ {c}</p>)}
+        </div>
+      </>}
+      <div className="p-bloc">🚧 Blocages identifiés</div>
+      {diag.blocages.map((b,i)=><div key={i} className="p-sec">
+        <div className="p-title">{b.emoji} Blocage {i+1} — {b.titre}</div>
+        <p className="p-label">Niveau : {b.niveau}</p>
+        <p className="p-rep">{b.desc}</p>
+      </div>)}
+      <div className="p-bloc">🌱 Plan d'action</div>
+      {diag.blocages.map((b,i)=><div key={i} className="p-sec">
+        <div className="p-title">{b.emoji} {b.titre}</div>
+        <p className="p-label">Intervention : {b.intervention}</p>
+        {b.actions.map((a,j)=><p key={j} className="p-rep">› {a}</p>)}
+        <p className="p-ital">❓ {b.question}</p>
+        <p className="p-label">✓ {b.indicateur}</p>
+      </div>)}
+      <div className="p-bloc">🧭 Priorités de développement</div>
+      <div className="p-sec">
+        <p className="p-rep"><b>1. Croyances limitantes :</b> Le niveau le plus impactant. Une croyance libérée libère automatiquement les comportements.</p>
+        <p className="p-rep"><b>2. Identité cible :</b> Définir qui vous devez devenir et l'incarner dans vos microdécisions quotidiennes.</p>
+        <p className="p-rep"><b>3. Rituels d'action :</b> Transformer les intentions en comportements réguliers non-négociables.</p>
+      </div>
+      <div className="p-bloc">💬 Message personnel</div>
+      <div className="p-msg">{nom}, vous avez eu le courage de vous arrêter pour vous regarder en face — c'est déjà un acte de leader. Ce que vos réponses révèlent, c'est quelqu'un de riche intérieurement, avec des valeurs claires, des capacités réelles et un sens profond de sa mission. Ce qui vous retient n'est pas un manque de talent — c'est une histoire que vous vous racontez sur vous-même, et les histoires peuvent changer. Vous avez tout ce qu'il faut. Il est temps de le décider.</div>
+      <div className="p-footer">Pyramide des Niveaux Logiques · Robert Dilts · Document confidentiel — {nom} · {date}</div>
+    </div>
+  </div>
+);
+```
+
+}
+return null;
+}
+
+// ─── COMPOSANTS ───────────────────────────────────────────────────────────────
+const Sp={p:{color:”#7a9ab8”,fontSize:14,lineHeight:1.8,margin:“4px 0”},b:{color:”#c8dff0”}};
+function Sec({c,t,children}){return <div style={{background:”#080e1a”,border:`1px solid #0f1e30`,borderLeft:`3px solid ${c}`,borderRadius:10,padding:“16px 18px”,marginBottom:14}}><h3 style={{color:c,fontSize:14,fontWeight:700,margin:“0 0 10px”}}>{t}</h3>{children}</div>;}
+function Pg({children}){return <div style={{minHeight:“100vh”,background:”#040c18”,display:“flex”,justifyContent:“center”,alignItems:“flex-start”,padding:“24px 12px 80px”,fontFamily:”‘Segoe UI’,system-ui,sans-serif”,position:“relative”}}><div style={{position:“fixed”,top:0,left:0,right:0,height:“35vh”,background:“radial-gradient(ellipse at 50% 0%, #0c1e38 0%, transparent 70%)”,pointerEvents:“none”}}/>{children}</div>;}
+function Card({children,w=560,centre=false}){return <div style={{background:”#0a1628”,border:“1px solid #0f1e30”,borderRadius:18,padding:“28px 30px”,width:“100%”,maxWidth:w,marginTop:18,position:“relative”,zIndex:1,boxShadow:“0 24px 60px rgba(0,0,0,.6)”,textAlign:centre?“center”:“left”}}>{children}</div>;}
+function Bdg({children}){return <span style={{background:”#0c1e34”,color:”#60a5fa”,fontSize:11,fontWeight:700,padding:“3px 9px”,borderRadius:20,letterSpacing:1}}>{children}</span>;}
+function Tag({children,c}){return <span style={{fontSize:11,fontWeight:700,padding:“3px 10px”,borderRadius:20,background:c+“22”,color:c,border:`1px solid ${c}44`}}>{children}</span>;}
+function Bar({pct,c}){return <div style={{background:”#0f1e30”,borderRadius:99,height:3,marginTop:8,overflow:“hidden”}}><div style={{width:pct+”%”,height:“100%”,background:c,borderRadius:99,transition:“width .4s”}}/></div>;}
+function Row({children}){return <div style={{display:“flex”,gap:10,justifyContent:“space-between”,flexWrap:“wrap”}}>{children}</div>;}
+function MiniPyr({idx}){return <div style={{display:“flex”,gap:4,marginTop:16,justifyContent:“center”}}>{NIVEAUX.map((n,i)=><div key={n.id} style={{width:26,height:5,borderRadius:3,background:i===idx?n.c:i<idx?n.c+“55”:”#0f1e30”,transition:“all .3s”}}/>)}</div>;}
+function Pyr({size=48}){return <svg width={size} height={size*.85} viewBox=“0 0 40 34” fill=“none” style={{display:“block”,margin:“0 auto 12px”}}><polygon points="20,2 38,32 2,32" fill="none" stroke="#60a5fa" strokeWidth="1.6" strokeLinejoin="round"/><line x1="3" y1="25" x2="37" y2="25" stroke="#4ade80" strokeWidth="1.1" opacity=".7"/><line x1="7" y1="18" x2="33" y2="18" stroke="#fb923c" strokeWidth="1.1" opacity=".7"/><line x1="12" y1="11" x2="28" y2="11" stroke="#f87171" strokeWidth="1.1" opacity=".7"/></svg>;}
+function Btn({children,onClick,w=“100%”}){return <button onClick={onClick} style={{background:”#60a5fa”,color:”#040c18”,border:“none”,borderRadius:8,padding:“12px 20px”,fontSize:14,fontWeight:700,cursor:“pointer”,width:w}}>{children}</button>;}
+function BtnS({children,onClick}){return <button onClick={onClick} style={{background:”#0a1628”,color:”#4a6080”,border:“1px solid #0f1e30”,borderRadius:8,padding:“11px 16px”,fontSize:13,cursor:“pointer”}}>{children}</button>;}
+const S={h1:{color:”#e8f0f8”,fontSize:24,fontWeight:700,margin:“0 0 6px”},h2:{color:”#e8f0f8”,fontSize:20,fontWeight:700,margin:“10px 0 6px”},sub:{color:”#3a5878”,fontSize:14,lineHeight:1.7,margin:“0 0 18px”},desc:{color:”#3a5878”,fontSize:14,lineHeight:1.7,margin:“0 0 14px”},sep:{height:1,background:”#0f1e30”,margin:“0 0 18px”},inp:{width:“100%”,boxSizing:“border-box”,background:”#07111f”,border:“1.5px solid #0f1e30”,borderRadius:8,color:”#e8f0f8”,fontSize:15,padding:“11px 14px”,outline:“none”,fontFamily:“inherit”,marginBottom:14},sec:{background:”#0a1628”,color:”#4a6080”,border:“1px solid #0f1e30”,borderRadius:8,padding:“10px 16px”,fontSize:13,cursor:“pointer”}};
+
+ReactDOM.createRoot(document.getElementById(‘root’)).render(<App/>);
+</script>
+
+</body>
+</html>
